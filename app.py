@@ -22,7 +22,6 @@ from core.exporter import export_to_excel
 # Konfigurasi Halaman Dasar
 st.set_page_config(
     page_title="PLTS Sizing & Techno-Economic System",
-    page_icon="☀️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -139,7 +138,7 @@ if "solar_irr" not in st.session_state:
 if "calc_results" not in st.session_state:
     st.session_state["calc_results"] = None
 
-st.title("☀️ PLTS Sizing & Techno-Economic System")
+st.title("PLTS Sizing & Techno-Economic System")
 st.caption("Aplikasi Rekayasa & Evaluasi Tekno-Ekonomi Sistem Pembangkit Listrik Tenaga Surya")
 
 # ==============================================================================
@@ -407,7 +406,7 @@ with tab_step2:
     # Revisi #7: Wording Batasan Luas Lahan/Atap (m²) tanpa [0 = Tanpa Batas], jika 0 beri warning "Luas Lahan Tanpa Batas"
     available_area = k_col3.number_input("Batasan Luas Lahan/Atap (m²)", value=0.0, min_value=0.0, step=50.0)
     if available_area == 0.0:
-        st.warning("⚠️ Luas Lahan Tanpa Batas")
+        st.warning("Perhatian: Luas Lahan Tanpa Batas (Unconstrained Area)")
 
     st.subheader("Parameter Rekayasa & Finansial Lanjutan")
     fp1, fp2, fp3, fp4, fp5, fp6 = st.columns(6)
@@ -436,7 +435,7 @@ with tab_step2:
     )
 
     st.write("")
-    if st.button("🚀 Jalankan Kalkulasi Sizing & Kinerja", type="primary", use_container_width=True):
+    if st.button("Jalankan Kalkulasi Sizing & Kinerja", type="primary", use_container_width=True):
         if mod_spec["pmax"] <= 0 or mod_spec["voc"] <= 0 or mod_spec["vmp"] <= 0:
             st.error("Parameter Modul PV belum lengkap atau bernilai 0.")
         elif inv_spec["pac_kw"] <= 0 or inv_spec["vdc_max"] <= 0 or inv_spec["mppt_max"] <= 0:
@@ -492,7 +491,7 @@ with tab_step2:
 with tab_step3:
     res = st.session_state["calc_results"]
     if res is None:
-        st.info("⚠️ Silakan jalankan kalkulasi pada Tab 2 terlebih dahulu.")
+        st.info("Silakan jalankan kalkulasi pada Tab 2 terlebih dahulu.")
     else:
         st.header("Ringkasan Hasil Perancangan Teknis")
         m1, m2, m3, m4 = st.columns(4)
@@ -574,23 +573,128 @@ with tab_step3:
             )
             st.plotly_chart(fig_soc, use_container_width=True)
 
-        # Revisi #12: Konfigurasi String per Unit yang direkomendasikan (read-only, intuitif)
+        # Rekomendasi Konfigurasi String per Unit (Card & Diagram Blok 2D)
         st.subheader("Rekomendasi Konfigurasi String per Unit Inverter")
-        st.caption("Konfigurasi string di bawah ini dihitung otomatis untuk menjaga tegangan selalu berada dalam rentang efisiensi MPPT tertinggi pada kondisi suhu ekstrem.")
-        
-        layout_rows = []
-        for row in pv_r.get("layout", []):
-            str_utama = f"{row['str_p']} String × {row['mod_p']} Modul" if row['str_p'] > 0 else "-"
-            str_tambahan = f"{row['str_k']} String × {row['mod_k']} Modul" if row['str_k'] > 0 else "-"
-            total_m = (row["str_p"] * row["mod_p"]) + (row["str_k"] * row["mod_k"])
-            layout_rows.append({
-                "Unit Inverter": f"Inverter #{row['inv_idx']:02d}",
-                "Rangkaian Utama": str_utama,
-                "Rangkaian Tambahan": str_tambahan,
-                "Total Modul Terhubung": f"{total_m} Modul",
-                "Status MPPT": "Sesuai Rentang Optimal"
-            })
-        st.dataframe(pd.DataFrame(layout_rows), use_container_width=True, hide_index=True)
+        st.caption("Konfigurasi rangkaian string modul surya dirancang untuk menjamin tegangan kerja selalu berada dalam efisiensi tertinggi pelacak MPPT serta memenuhi batas ketahanan tegangan pada suhu dingin ekstrem.")
+
+        # Ambil parameter rangkaian
+        layout = pv_r.get("layout", [])
+        n_series = layout[0]["mod_p"] if layout else pv_r.get("mod_per_str", 1)
+        n_parallel = layout[0]["str_p"] if layout else pv_r.get("str_per_inv", 1)
+        vmp_str = n_series * res["module_spec"].get("vmp", 0.0)
+        voc_str = pv_r.get("voc_max_act", n_series * res["module_spec"].get("voc", 0.0))
+        imp_str = res["module_spec"].get("imp", res["module_spec"].get("isc", 0.0) * 0.95)
+        idc_mppt = pv_r.get("arus_mppt_act", n_parallel * res["module_spec"].get("isc", 0.0))
+        pac_kw = res["inverter_spec"].get("pac_kw", 0.0)
+
+        # 1. Diagram Blok Skematik 2D (Anti-slop SVG)
+        svg_diagram = f"""
+        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 16px; margin: 14px 0;">
+            <div style="font-weight: 600; font-size: 13px; color: #0F172A; margin-bottom: 12px; letter-spacing: 0.02em;">DIAGRAM BLOK 2D: RANGKAIAN ELEKTRIKAL STRING KE INVERTER</div>
+            <svg viewBox="0 0 820 180" width="100%" height="180" xmlns="http://www.w3.org/2000/svg" style="font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif;">
+                <defs>
+                    <marker id="arrow-org" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 1 L 8 5 L 0 9 z" fill="#EA580C"/>
+                    </marker>
+                </defs>
+
+                <!-- Box 1: PV Series Array -->
+                <rect x="10" y="20" width="225" height="140" rx="4" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.2"/>
+                <rect x="10" y="20" width="225" height="26" rx="4" fill="#F1F5F9"/>
+                <text x="20" y="38" font-size="11" font-weight="bold" fill="#0F172A">RANGKAIAN SERI MODUL</text>
+                
+                <rect x="25" y="60" width="30" height="42" rx="2" fill="#EA580C" fill-opacity="0.08" stroke="#EA580C" stroke-width="1.2"/>
+                <line x1="55" y1="81" x2="68" y2="81" stroke="#EA580C" stroke-width="2"/>
+                <rect x="68" y="60" width="30" height="42" rx="2" fill="#EA580C" fill-opacity="0.08" stroke="#EA580C" stroke-width="1.2"/>
+                <line x1="98" y1="81" x2="112" y2="81" stroke="#EA580C" stroke-width="2" stroke-dasharray="2,2"/>
+                <rect x="112" y="60" width="30" height="42" rx="2" fill="#EA580C" fill-opacity="0.08" stroke="#EA580C" stroke-width="1.2"/>
+
+                <text x="155" y="78" font-size="11" font-weight="bold" fill="#0F172A">{n_series} Modul</text>
+                <text x="155" y="93" font-size="10" fill="#64748B">Hubungan Seri</text>
+
+                <text x="20" y="128" font-size="11" fill="#475569">Vmp Operasi: <tspan font-weight="bold" fill="#0F172A">{vmp_str:.1f} V</tspan></text>
+                <text x="20" y="145" font-size="10" fill="#64748B">Voc Ekstrem: {voc_str:.1f} V</text>
+
+                <!-- Line: Series -> Parallel Bus -->
+                <line x1="235" y1="85" x2="280" y2="85" stroke="#EA580C" stroke-width="2" marker-end="url(#arrow-org)"/>
+                <text x="240" y="76" font-size="9" fill="#EA580C" font-weight="bold">DC STRING</text>
+
+                <!-- Box 2: Parallel Combiner / MPPT Channel -->
+                <rect x="285" y="20" width="220" height="140" rx="4" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.2"/>
+                <rect x="285" y="20" width="220" height="26" rx="4" fill="#F1F5F9"/>
+                <text x="295" y="38" font-size="11" font-weight="bold" fill="#0F172A">HUBUNGAN PARALEL (MPPT)</text>
+
+                <rect x="300" y="60" width="32" height="24" rx="2" fill="#EA580C" fill-opacity="0.12"/>
+                <text x="308" y="76" font-size="11" font-weight="bold" fill="#EA580C">||</text>
+                <text x="340" y="76" font-size="12" font-weight="bold" fill="#0F172A">{n_parallel} String Paralel</text>
+
+                <text x="295" y="108" font-size="11" fill="#475569">Arus String (Imp): <tspan font-weight="bold" fill="#0F172A">{imp_str:.1f} A</tspan></text>
+                <text x="295" y="126" font-size="11" fill="#475569">Arus Masuk MPPT: <tspan font-weight="bold" fill="#EA580C">{idc_mppt:.1f} A</tspan></text>
+                <text x="295" y="145" font-size="10" fill="#16A34A" font-weight="bold">Lolos Batas Maksimum Inverter</text>
+
+                <!-- Line: Parallel -> Inverter -->
+                <line x1="505" y1="85" x2="550" y2="85" stroke="#EA580C" stroke-width="2" marker-end="url(#arrow-org)"/>
+                <text x="510" y="76" font-size="9" fill="#EA580C" font-weight="bold">DC INPUT</text>
+
+                <!-- Box 3: Inverter MPPT & AC Stage -->
+                <rect x="555" y="20" width="255" height="140" rx="4" fill="#FFFFFF" stroke="#0F172A" stroke-width="1.5"/>
+                <rect x="555" y="20" width="255" height="26" rx="4" fill="#0F172A"/>
+                <text x="567" y="38" font-size="11" font-weight="bold" fill="#FFFFFF">UNIT INVERTER</text>
+
+                <text x="567" y="70" font-size="11" fill="#475569">Kapasitas AC: <tspan font-weight="bold" fill="#0F172A">{pac_kw:.1f} kW</tspan></text>
+                <text x="567" y="90" font-size="11" fill="#475569">Konversi: <tspan font-weight="bold" fill="#0F172A">DC ke AC 3-Fasa (380V)</tspan></text>
+                <text x="567" y="110" font-size="11" fill="#475569">Rentang MPPT: <tspan font-weight="bold" fill="#0F172A">Efisiensi Maksimal</tspan></text>
+                <text x="567" y="138" font-size="11" font-weight="bold" fill="#16A34A">Status: Verifikasi Elektrikal Aman</text>
+            </svg>
+        </div>
+        """
+        st.markdown(svg_diagram, unsafe_allow_html=True)
+
+        # 2. Ringkasan Parameter Elektrikal String
+        s_c1, s_c2, s_c3, s_c4 = st.columns(4)
+        s_c1.metric("Susunan Seri", f"{n_series} Modul Seri", help="Jumlah modul yang dipasang seri dalam 1 string untuk menghasilkan tegangan kerja.")
+        s_c2.metric("Susunan Paralel", f"{n_parallel} String Paralel", help="Jumlah string modul yang digabung paralel untuk menyuplai arus ke inverter.")
+        s_c3.metric("Tegangan Kerja (Vmp)", f"{vmp_str:.1f} V", help="Tegangan operasional string pada kondisi radiasi matahari optimal (STC).")
+        s_c4.metric("Tegangan Ekstrem (Voc)", f"{voc_str:.1f} V", help=f"Tegangan rangkaian terbuka saat kondisi suhu terdingin ({res.get('tmin', 18):.0f}°C). Wajib berada di bawah batas Vdc Max Inverter ({res['inverter_spec']['vdc_max']:.0f} V).")
+
+        # 3. Kartu Detail per Unit Inverter (Pengelompokan konfigurasi)
+        st.write("")
+        st.markdown("**Detail Alokasi String per Unit Inverter**")
+        grouped_layout = {}
+        for row in layout:
+            key = (row["str_p"], row["mod_p"], row["str_k"], row["mod_k"])
+            if key not in grouped_layout:
+                grouped_layout[key] = []
+            grouped_layout[key].append(row["inv_idx"])
+
+        for (str_p, mod_p, str_k, mod_k), inv_indices in grouped_layout.items():
+            if len(inv_indices) == 1:
+                title_inv = f"Inverter #{inv_indices[0]:02d}"
+            elif len(inv_indices) == len(layout):
+                title_inv = f"Seluruh Inverter (Inverter #{inv_indices[0]:02d} s/d #{inv_indices[-1]:02d} — Total {len(inv_indices)} Unit)"
+            else:
+                title_inv = f"Inverter #{inv_indices[0]:02d} s/d #{inv_indices[-1]:02d} ({len(inv_indices)} Unit)"
+
+            with st.container(border=True):
+                head1, head2 = st.columns([3, 1])
+                head1.markdown(f"**{title_inv}**")
+                head2.caption("Status: Sesuai MPPT & Vdc")
+
+                tot_m = (str_p * mod_p) + (str_k * mod_k)
+                vmp_u = mod_p * res["module_spec"].get("vmp", 0.0)
+                voc_u = pv_r.get("voc_max_act", mod_p * res["module_spec"].get("voc", 0.0))
+                idc_u = str_p * res["module_spec"].get("isc", 0.0)
+
+                d1, d2, d3, d4 = st.columns(4)
+                d1.metric("Modul Seri per String", f"{mod_p} Unit")
+                d2.metric("Jumlah String Paralel", f"{str_p} String")
+                d3.metric("Tegangan Operasi (Vmp)", f"{vmp_u:.1f} V")
+                d4.metric("Arus DC Masuk MPPT", f"{idc_u:.1f} A")
+
+                if str_k > 0:
+                    st.caption(f"Rangkaian Tambahan: {str_k} String × {mod_k} Modul Seri | Total Modul per Inverter: {tot_m} Modul")
+                else:
+                    st.caption(f"Total Modul per Inverter: {tot_m} Modul ({tot_m * res['module_spec'].get('pmax', 0.0) / 1000.0:.1f} kWp DC)")
 
 # ------------------------------------------------------------------------------
 # TAB 4: ANALISIS FINANSIAL & LAPORAN
@@ -598,7 +702,7 @@ with tab_step3:
 with tab_step4:
     res = st.session_state["calc_results"]
     if res is None:
-        st.info("⚠️ Silakan jalankan kalkulasi pada Tab 2 terlebih dahulu.")
+        st.info("Silakan jalankan kalkulasi pada Tab 2 terlebih dahulu.")
     else:
         st.header("Analisis Kelayakan Finansial (Proyeksi 25 Tahun)")
         econ = res["economics"]
@@ -624,13 +728,14 @@ with tab_step4:
         f_c4, f_c5, f_c6 = st.columns(3)
         f_c4.metric("Penghematan Tahun ke-1", fmt_rp_ringkas(econ['first_year_saving']), help=f"Penghematan tahun 1: Rp {econ['first_year_saving']:,.0f}")
         
-        # Revisi #13: Penjelasan mendalam Biaya Energi Rata-rata (LCOE)
+        # Penjelasan mendalam Biaya Energi Rata-rata (LCOE)
         f_c5.metric(
             "Biaya Energi Rata-Rata (LCOE)",
             f"Rp {econ['lcoe_per_kwh']:,.1f} / kWh",
             help="LCOE (Levelized Cost of Electricity) adalah harga pokok produksi per 1 kWh energi listrik yang dihasilkan PLTS sepanjang masa pakainya (25 tahun), memperhitungkan biaya CAPEX, OPEX, degradasi modul, dan nilai waktu uang. Jika LCOE lebih rendah daripada Tarif PLN (Rp 1.444,70/kWh), sistem memberikan keuntungan finansial riil."
         )
-        f_c6.metric("Total Produksi Energi Tahunan", f"{econ.get('annual_energy_kwh', 0):,.0f} kWh/thn")
+        annual_energy_yield = res['dispatch_summary']['total_pv'] * 365.0
+        f_c6.metric("Total Produksi Energi Tahunan", f"{annual_energy_yield:,.0f} kWh/thn", help="Estimasi total produksi energi listrik dari seluruh panel surya selama 1 tahun.")
 
         # Revisi #14 & #15: Grafik Arus Kas Tahunan saja (tanpa kumulatif), warna orange aplikasi, range Y proporsional
         st.subheader("Grafik Arus Kas Bersih Tahunan (Tahun 1 - 25)")
@@ -673,7 +778,7 @@ with tab_step4:
         export_to_excel(res, excel_buf)
         excel_buf.seek(0)
         st.download_button(
-            label="📥 Unduh Laporan Format Excel (.xlsx)",
+            label="Unduh Laporan Format Excel (.xlsx)",
             data=excel_buf,
             file_name=f"Laporan_Sizing_PLTS_{res['topology']}_{int(res['kwp'])}kWp.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

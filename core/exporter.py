@@ -27,11 +27,13 @@ def export_to_excel(data: dict, target: Union[str, io.BytesIO]) -> None:
     # SHEET 1: Ringkasan Sizing
     # ==========================================
     ws1 = workbook.add_worksheet("Ringkasan Sizing")
-    ws1.set_column("A:A", 32)
+    ws1.set_column("A:A", 28)
     ws1.set_column("B:B", 25)
-    ws1.set_column("C:C", 15)
-    ws1.set_column("D:D", 20)
-    ws1.set_column("E:E", 15)
+    ws1.set_column("C:C", 24)
+    ws1.set_column("D:D", 22)
+    ws1.set_column("E:E", 24)
+    ws1.set_column("F:F", 24)
+    ws1.set_column("G:G", 22)
 
     ws1.write(0, 0, "LAPORAN SIZING SISTEM PLTS", title_fmt)
     ws1.write(1, 0, f"Topologi Sistem: {data.get('topology', 'On-Grid')}", bold_fmt)
@@ -158,20 +160,35 @@ def export_to_excel(data: dict, target: Union[str, io.BytesIO]) -> None:
     layout = pv_res.get("layout", [])
     if layout:
         r += 1
-        ws1.merge_range(r, 0, r, 4, "DISTRIBUSI STRING PER INVERTER", section_fmt)
+        ws1.merge_range(r, 0, r, 6, "6. DISTRIBUSI KONFIGURASI STRING INVERTER", section_fmt)
         r += 1
         ws1.write(r, 0, "No Inverter", hdr_fmt)
-        ws1.write(r, 1, "String Rangkaian Utama", hdr_fmt)
-        ws1.write(r, 2, "Modul/String Utama", hdr_fmt)
-        ws1.write(r, 3, "String Rangkaian Tambahan", hdr_fmt)
-        ws1.write(r, 4, "Modul/String Tambahan", hdr_fmt)
+        ws1.write(r, 1, "Modul Seri per String", hdr_fmt)
+        ws1.write(r, 2, "Jumlah String Paralel", hdr_fmt)
+        ws1.write(r, 3, "Tegangan Vmp (V)", hdr_fmt)
+        ws1.write(r, 4, "Tegangan Voc Dingin (V)", hdr_fmt)
+        ws1.write(r, 5, "Arus DC MPPT (A)", hdr_fmt)
+        ws1.write(r, 6, "Total Modul Terhubung", hdr_fmt)
         r += 1
         for row in layout:
-            ws1.write(r, 0, f"Inverter {row.get('inv_idx', 1)}", txt_fmt)
-            ws1.write(r, 1, row.get("str_p", 0), int_fmt)
-            ws1.write(r, 2, row.get("mod_p", 0), int_fmt)
-            ws1.write(r, 3, row.get("str_k", 0), int_fmt)
-            ws1.write(r, 4, row.get("mod_k", 0), int_fmt)
+            str_p = row.get("str_p", 0)
+            mod_p = row.get("mod_p", 0)
+            str_k = row.get("str_k", 0)
+            mod_k = row.get("mod_k", 0)
+            total_m = (str_p * mod_p) + (str_k * mod_k)
+            seri_desc = f"{mod_p} Modul Seri" if str_k == 0 else f"{mod_p} (Utama) / {mod_k} (Tambahan)"
+            par_desc = f"{str_p} String Paralel" if str_k == 0 else f"{str_p} (Utama) + {str_k} (Tambahan)"
+            vmp_est = mod_p * m_spec.get("vmp", 0.0)
+            voc_est = pv_res.get("voc_max_act", mod_p * m_spec.get("voc", 0.0))
+            arus_est = pv_res.get("arus_mppt_act", str_p * m_spec.get("isc", 0.0))
+
+            ws1.write(r, 0, f"Inverter #{row.get('inv_idx', 1):02d}", txt_fmt)
+            ws1.write(r, 1, seri_desc, txt_fmt)
+            ws1.write(r, 2, par_desc, txt_fmt)
+            ws1.write(r, 3, round(vmp_est, 1), num_fmt)
+            ws1.write(r, 4, round(voc_est, 1), num_fmt)
+            ws1.write(r, 5, round(arus_est, 1), num_fmt)
+            ws1.write(r, 6, total_m, int_fmt)
             r += 1
 
     # ==========================================

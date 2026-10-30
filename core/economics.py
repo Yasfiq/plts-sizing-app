@@ -83,5 +83,6 @@ def calc_financial_metrics(
         "payback_years": payback_years if payback_years is not None else float("inf"),
         "npv": npv,
         "lcoe_per_kwh": lcoe,
+        "annual_energy_kwh": annual_energy_kwh,
         "cashflows": cashflows,
     }
