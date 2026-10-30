@@ -1,3 +1,5 @@
+from typing import Optional
+
 def calc_financial_metrics(
     kwp: float,
     battery_kwh: float,
@@ -6,6 +8,8 @@ def calc_financial_metrics(
     mod_cost_wp: float = 3500.0,
     inv_cost_w: float = 1200.0,
     battery_cost_kwh: float = 3500000.0,
+    bos_cost: Optional[float] = None,
+    annual_opex: Optional[float] = None,
     bos_cost_pct: float = 0.15,
     opex_pct: float = 0.015,
     discount_rate: float = 0.08,
@@ -17,10 +21,13 @@ def calc_financial_metrics(
     inv_cost = kwp * 1000.0 * inv_cost_w
     bat_cost = battery_kwh * battery_cost_kwh
     base_component = pv_cost + inv_cost + bat_cost
-    bos_cost = base_component * bos_cost_pct
+    
+    if bos_cost is None:
+        bos_cost = base_component * bos_cost_pct
     capex = base_component + bos_cost
 
-    annual_opex = capex * opex_pct
+    if annual_opex is None:
+        annual_opex = capex * opex_pct
 
     npv = -capex
     cum_cash = -capex

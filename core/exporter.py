@@ -161,10 +161,10 @@ def export_to_excel(data: dict, target: Union[str, io.BytesIO]) -> None:
         ws1.merge_range(r, 0, r, 4, "DISTRIBUSI STRING PER INVERTER", section_fmt)
         r += 1
         ws1.write(r, 0, "No Inverter", hdr_fmt)
-        ws1.write(r, 1, "String Pola A", hdr_fmt)
-        ws1.write(r, 2, "Modul/String A", hdr_fmt)
-        ws1.write(r, 3, "String Pola B", hdr_fmt)
-        ws1.write(r, 4, "Modul/String B", hdr_fmt)
+        ws1.write(r, 1, "String Rangkaian Utama", hdr_fmt)
+        ws1.write(r, 2, "Modul/String Utama", hdr_fmt)
+        ws1.write(r, 3, "String Rangkaian Tambahan", hdr_fmt)
+        ws1.write(r, 4, "Modul/String Tambahan", hdr_fmt)
         r += 1
         for row in layout:
             ws1.write(r, 0, f"Inverter {row.get('inv_idx', 1)}", txt_fmt)
