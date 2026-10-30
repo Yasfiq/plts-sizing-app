@@ -1,0 +1,87 @@
+{
+  "modules": [
+    {
+      "name": "Standard Mono-PERC 550Wp",
+      "pmax": 550.0,
+      "voc": 49.5,
+      "vmp": 41.5,
+      "isc": 14.0,
+      "kvoc": -0.28,
+      "kvmp": -0.35,
+      "length_mm": 2278,
+      "width_mm": 1134,
+      "cost_per_wp": 3500
+    },
+    {
+      "name": "Jinko Tiger Neo N-Type 580Wp",
+      "pmax": 580.0,
+      "voc": 51.2,
+      "vmp": 42.8,
+      "isc": 14.15,
+      "kvoc": -0.25,
+      "kvmp": -0.30,
+      "length_mm": 2278,
+      "width_mm": 1134,
+      "cost_per_wp": 4000
+    }
+  ],
+  "inverters": [
+    {
+      "name": "String Inverter 50kW On-Grid",
+      "type": "on-grid",
+      "pac_kw": 50.0,
+      "mppt_min": 500.0,
+      "mppt_max": 850.0,
+      "vdc_max": 1000.0,
+      "n_mppt": 4,
+      "imax_mppt": 30.0,
+      "string_per_mppt": 2,
+      "efficiency": 0.985,
+      "cost_per_w": 1200
+    },
+    {
+      "name": "Commercial Inverter 100kW On-Grid",
+      "type": "on-grid",
+      "pac_kw": 100.0,
+      "mppt_min": 200.0,
+      "mppt_max": 1000.0,
+      "vdc_max": 1100.0,
+      "n_mppt": 10,
+      "imax_mppt": 30.0,
+      "string_per_mppt": 2,
+      "efficiency": 0.987,
+      "cost_per_w": 1000
+    },
+    {
+      "name": "Hybrid Inverter 10kW",
+      "type": "hybrid",
+      "pac_kw": 10.0,
+      "mppt_min": 200.0,
+      "mppt_max": 650.0,
+      "vdc_max": 800.0,
+      "n_mppt": 2,
+      "imax_mppt": 16.0,
+      "string_per_mppt": 2,
+      "efficiency": 0.975,
+      "cost_per_w": 2500
+    }
+  ],
+  "batteries": [
+    {
+      "name": "Lithium LiFePO4 48V 100Ah",
+      "voltage_nominal": 48.0,
+      "capacity_ah": 100.0,
+      "dod_max": 0.85,
+      "efficiency": 0.95,
+      "cost_per_kwh": 3500000
+    },
+    {
+      "name": "VRLA Gel Deep Cycle 12V 200Ah",
+      "voltage_nominal": 12.0,
+      "capacity_ah": 200.0,
+      "dod_max": 0.50,
+      "efficiency": 0.85,
+      "cost_per_kwh": 2200000
+    }
+  ]
+}
